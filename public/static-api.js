@@ -311,6 +311,12 @@
       if (opp && opp.details) return json({ details: opp.details });
       return json({ error: 'În versiunea online, condițiile sunt aduse doar pentru anunțurile IT în desfășurare. Deschide anunțul în SEAP.' }, 404);
     }
+    if (method === 'GET' && p === '/api/market') {
+      let m = null;
+      if (getToken()) m = await readDataBranch('market.json').catch(() => null);
+      if (!m) m = await (await realFetch('data/market.json', { cache: 'no-store' })).json().catch(() => ({ items: [] }));
+      return json(m);
+    }
     if (p === '/api/profile') {
       if (method === 'PUT') { lsSet(LS.profile, { ...getProfile(), ...body }); }
       return json({ profile: getProfile() });

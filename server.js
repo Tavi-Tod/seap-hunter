@@ -19,6 +19,7 @@ const {
   getNoticeDetails,
   downloadNoticeDocument
 } = require('./seap-client');
+const { syncMarket, readMarket } = require('./market');
 
 const PORT = process.env.PORT || 3080;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -52,6 +53,9 @@ function fullSyncDue() {
 function startAutoSync() {
   // la pornire: sincronizare completă dacă nu s-a făcut în ultimele 12 ore, altfel doar incrementală
   runAutoSync(fullSyncDue() ? FULL_SYNC_DAYS : INCREMENTAL_SYNC_DAYS, 'pornire server');
+  const marketSync = () => syncMarket({ ifOlderThanHours: 6, log: l => console.log('  ', l) }).catch(e => console.log(`   ⚠️ Piață: ${e.message}`));
+  setTimeout(marketSync, 60000);            // după prima sincronizare
+  setInterval(marketSync, 3 * 3600000);
 
   const intervalMs = AUTO_SYNC_MINUTES * 60000;
   nextAutoSyncAt = new Date(Date.now() + intervalMs);
@@ -227,6 +231,11 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       const result = await syncWithLiveSEAP({ days: Number(body.days) || FULL_SYNC_DAYS });
       return sendJSON(res, 200, result);
+    }
+
+    // 2a. GET /api/market → cumpărări directe atribuite (site-uri / web / găzduire)
+    if (req.method === 'GET' && pathname === '/api/market') {
+      return sendJSON(res, 200, readMarket());
     }
 
     // 2b. GET /api/sync-status

@@ -107,6 +107,12 @@ async function main() {
 
   const logs = [];
   await downloadDocs(logs);
+  try {
+    const mr = await require('../market').syncMarket({ ifOlderThanHours: 6, log: l => logs.push(l) });
+    if (mr.skipped) logs.push(`📊 Piață: neschimbată (${mr.count} înregistrări, actualizare la max. 6 ore)`);
+  } catch (e) {
+    logs.push(`⚠️ Piață: ${e.message}`);
+  }
   logs.forEach(l => console.log('  ', l));
 
   // ---- site ----
@@ -123,6 +129,8 @@ async function main() {
       return rest;
     });
   fs.writeFileSync(path.join(SITE_DIR, 'data', 'notices.json'), JSON.stringify(notices));
+  const marketFile = path.join(DATA_DIR, 'market.json');
+  if (fs.existsSync(marketFile)) fs.copyFileSync(marketFile, path.join(SITE_DIR, 'data', 'market.json'));
 
   const finalState = client.getSyncState();
   const meta = {
