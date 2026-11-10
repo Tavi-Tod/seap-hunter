@@ -982,3 +982,44 @@ body {
 .btn-doc { background: var(--amber-bg); border: 1px solid var(--amber); color: var(--amber); text-decoration: none; }
 .btn-doc:hover { background: var(--amber); color: #111; }
 @media (max-width: 720px) { .cond-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Telefon ---------- */
+@media (max-width: 720px) {
+  .topbar { position: static; padding: 10px 14px; }
+  .brand-subtitle, .zero-begging-pill, .badge-accent, .brand-logo { display: none; }
+  .brand h1 { font-size: 20px; }
+  .topbar-actions { gap: 6px; }
+  .topbar-actions .btn { padding: 7px 10px; font-size: 12px; }
+  #btnOpenCalculator, #btnOpenGuide { display: none; }
+  .container { padding-left: 12px; padding-right: 12px; }
+  #syncStatus { font-size: 11px !important; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-card { padding: 10px 12px; }
+  .kpi-value { font-size: 18px; }
+  .kpi-sub, .kpi-card:nth-child(4) { display: none; }
+  .cpv-bar { display: none; }
+  .category-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .tab-btn { white-space: nowrap; flex: 0 0 auto; }
+  .filters-row > * { flex: 1 1 100%; }
+  .filters-row .search-box { flex-basis: 100%; }
+  .preset-row { flex-wrap: nowrap; overflow-x: auto; }
+  .preset-btn { white-space: nowrap; flex: 0 0 auto; }
+  .opp-card { padding: 14px; }
+  .opp-title { font-size: 16px; }
+  .fin-strip { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .fin-val { font-size: 14px; }
+  .opp-actions-row, .btn-group { flex-wrap: wrap; gap: 8px; }
+  .opp-actions-row .btn-group .btn { flex: 1 1 auto; text-align: center; }
+  .status-select-card { width: 100%; }
+}
+@media (max-width: 720px) {
+  .kpi-card:nth-child(3) { display: none; }
+  .kpi-label { font-size: 10px; }
+  .filters-row > * { flex: 1 1 calc(50% - 6px); min-width: 0; }
+  .filters-row .search-box { flex-basis: 100%; }
+  #btnExportCSV { display: none; }
+  .filter-select { padding: 8px; font-size: 12px; }
+  .date-filters-row { gap: 8px; }
+  .date-group { padding: 6px 8px; }
+  .date-group label { flex: 1 1 45%; }
+}

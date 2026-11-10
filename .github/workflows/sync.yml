@@ -1,0 +1,70 @@
+name: Sincronizare SEAP + publicare
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'   # ~la fiecare 30 de minute (GitHub poate întârzia câteva minute)
+  workflow_dispatch:          # butonul „Actualizează acum” din pagină
+    inputs:
+      days:
+        description: 'Câte zile în urmă (gol = automat: 30 dacă ultima sincronizare completă e mai veche de 12h, altfel 2)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # salvăm baza de date pe ramura "data"
+  pages: write
+  id-token: write
+
+concurrency:
+  group: seap-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ia baza de date de pe ramura "data"
+        run: |
+          mkdir -p data-store
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch --depth=1 origin data
+            git --work-tree=data-store checkout origin/data -- .
+            git reset -q
+          fi
+          ls -la data-store
+
+      - name: Sincronizează SEAP și construiește site-ul
+        env:
+          SEAP_DATA_DIR: data-store
+          SITE_DIR: site
+          SYNC_DAYS: ${{ inputs.days }}
+        run: node scripts/build-static.js
+
+      - name: Salvează baza de date pe ramura "data"
+        run: |
+          cd data-store
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Date SEAP $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

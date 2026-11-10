@@ -113,6 +113,10 @@ function renderSyncStatus(sync) {
   const fmt = iso => (iso ? new Date(iso).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
   if (sync.running) {
     const p = sync.progress;
+    if (p && p.phase === 'github') {
+      el.textContent = '⏳ Actualizare pornită pe GitHub — durează de obicei 1–3 minute, lista se reîncarcă singură...';
+      return;
+    }
     el.textContent = p
       ? `⏳ Se descarcă anunțurile din e-licitatie.ro... ziua ${p.done}/${p.total} (${p.fetched} anunțuri până acum)`
       : '⏳ Sincronizare cu e-licitatie.ro în curs...';
@@ -122,7 +126,9 @@ function renderSyncStatus(sync) {
   const err = r && r.error ? ` • ⚠️ Ultima eroare: ${r.error}` : '';
   el.textContent = `✅ Ultima sincronizare: ${fmt(sync.lastSyncAt)}` +
     (r && r.itCount !== undefined ? ` (${r.fetchedCount} anunțuri descărcate din ultimele ${r.days} zile, ${r.itCount} IT dintre care ${r.itActiveCount} în desfășurare)` : '') +
-    ` • ${totalInDatabase} anunțuri în baza locală • Următoarea verificare: ${fmt(sync.nextAutoSyncAt)}${err}`;
+    (sync.staticMode
+      ? ` • ${totalInDatabase} anunțuri • actualizare automată ~la 30 min`
+      : ` • ${totalInDatabase} anunțuri în baza locală • Următoarea verificare: ${fmt(sync.nextAutoSyncAt)}`) + err;
 }
 
 // Reîncarcă lista automat când serverul termină o sincronizare în fundal
@@ -279,7 +285,11 @@ function textBlock(label, value, cls = '') {
 
 function renderDetailsHTML(o) {
   const id = escapeHTML(o.id);
-  const docUrl = `/api/opportunities/${encodeURIComponent(o.id)}/document`;
+  const isStatic = Boolean(window.SEAP_STATIC);
+  const docUrl = isStatic
+    ? (o.details && o.details.docFile ? `docs/${encodeURIComponent(o.details.docFile)}` : o.seapUrl)
+    : `/api/opportunities/${encodeURIComponent(o.id)}/document`;
+  const originalUrl = isStatic ? o.seapUrl : `${docUrl}?original=1`;
   if (!o.advNoticeId) {
     return `<div class="cond-panel"><span class="cond-muted">Anunț adăugat manual — nu există detalii în SEAP.</span></div>`;
   }
@@ -314,7 +324,7 @@ function renderDetailsHTML(o) {
       <div class="cond-actions">
         ${d.hasDocument
           ? `<a class="btn btn-sm btn-doc" href="${docUrl}" target="_blank" rel="noopener" title="${escapeHTML(d.documentName || '')}">📄 Vezi caietul de sarcini</a>
-             <a class="cond-link" href="${docUrl}?original=1" title="Fișierul original, cu semnătura electronică">⬇ original semnat (${escapeHTML(d.documentName || 'document')})</a>`
+             <a class="cond-link" href="${originalUrl}" ${isStatic ? 'target="_blank" rel="noopener"' : ''} title="Fișierul original, cu semnătura electronică">⬇ original semnat (${escapeHTML(d.documentName || 'document')})</a>`
           : '<span class="cond-muted">Fără document atașat în SEAP</span>'}
       </div>
     </div>`;
@@ -512,7 +522,9 @@ function setupEventListeners() {
     btn.disabled = true;
     btn.innerHTML = '⏳ Se scanează e-licitatie.ro...';
     const days = Number(document.getElementById('syncDays').value) || 30;
-    showBanner(`🔍 Se descarcă toate anunțurile din „Publicitate anunțuri” (e-licitatie.ro), ultimele ${days} zile...`);
+    showBanner(window.SEAP_STATIC
+      ? '🔍 Am pornit actualizarea pe GitHub (anunțurile din ultimele 2 zile) — durează de obicei 1–3 minute...'
+      : `🔍 Se descarcă toate anunțurile din „Publicitate anunțuri” (e-licitatie.ro), ultimele ${days} zile...`);
     wasRunning = true;
     setTimeout(pollSyncStatus, 1000);
 
@@ -528,7 +540,9 @@ function setupEventListeners() {
       if (data.liveReachable) {
         showBanner(`✅ Sincronizare reușită: ${data.fetchedCount} anunțuri descărcate, ${data.itCount} din zona IT (${data.itActiveCount} în desfășurare), +${data.addedCount} noi.`);
       } else {
-        showBanner(`⚠️ Nu s-a putut contacta e-licitatie.ro${data.error ? ` (${data.error})` : ''}. Rămân anunțurile salvate local.`);
+        showBanner(window.SEAP_STATIC
+          ? `⚠️ ${data.error || 'Actualizarea nu a reușit.'}`
+          : `⚠️ Nu s-a putut contacta e-licitatie.ro${data.error ? ` (${data.error})` : ''}. Rămân anunțurile salvate local.`);
       }
       lastSeenSyncAt = data.timestamp || lastSeenSyncAt;
       pollSyncStatus();
@@ -872,3 +886,4 @@ window.openSEAPSearchModal = openSEAPSearchModal;
 window.openOfferModal = openOfferModal;
 window.updateStatus = updateStatus;
 window.loadDetails = loadDetails;
+window.loadInitialData = loadInitialData;
