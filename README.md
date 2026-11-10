@@ -42,6 +42,26 @@ Datele locale stau în `data/notices.json`. Profitul/marja afișate sunt **estim
 
 ---
 
+## 📱 Versiunea online (telefon, fără laptop pornit)
+
+**Link:** https://tavi-tod.github.io/seap-hunter/
+
+- Rulează gratuit pe GitHub: **GitHub Actions** (`.github/workflows/sync.yml`) descarcă anunțurile din SEAP la ~30 de minute, aduce condițiile și caietele de sarcini (PDF extras din `.p7s`), apoi publică pagina pe **GitHub Pages**.
+- Baza de date se păstrează pe ramura `data`; statusurile tale („În analiză”, „Ofertă trimisă”…) pe ramura `user-data`.
+- **Actualizează acum** pornește imediat workflow-ul (anunțurile din ultimele 2 zile) și reîncarcă lista în ~1–3 minute.
+
+### Conectarea telefonului (o singură dată pe fiecare dispozitiv)
+1. Deschide https://github.com/settings/personal-access-tokens/new
+2. *Repository access* → **Only select repositories** → `seap-hunter`
+3. *Permissions → Repository*: **Actions: Read and write**, **Contents: Read and write**
+4. *Generate token* → copiază-l → în pagină apasă **🔑 GitHub** și lipește-l.
+
+Fără token pagina funcționează (listă, filtre, condiții, caiete de sarcini), dar fără „Actualizează acum” și cu statusurile salvate doar local pe acel dispozitiv.
+
+**De știut:** repository-ul este public (anunțurile SEAP sunt oricum publice; statusurile din `user-data` sunt și ele vizibile). Datele firmei pentru oferte rămân doar în browserul dispozitivului. Adăugarea manuală și importul CSV există doar în versiunea de pe laptop.
+
+---
+
 ## 🎯 Cele 3 Nișe Monitorizate (0 Cerșeală — Banii sunt deja în contul instituției)
 
 1. **🌐 Site Web Primărie / Școală + Modul Registratură Online & Monitorul Oficial Local (MOL)**
