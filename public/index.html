@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEAP Hunter — Anunțuri IT</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Top Header -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">🇷🇴</div>
+        <div>
+          <div class="brand-title-row">
+            <h1>SEAP Hunter <span class="badge-accent">PNRR & Digitalizare</span></h1>
+            <span class="zero-begging-pill">⚡ 0 Cerșeală • Banii deja în contul instituției</span>
+          </div>
+          <p class="brand-subtitle">
+            Toate anunțurile din <strong>e-licitatie.ro → Publicitate anunțuri</strong>, cu filtru pe dată și extragere automată a celor din zona IT (site-uri, aplicații, software, echipamente, rețele)
+          </p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <select id="syncDays" class="filter-select" title="Câte zile în urmă se descarcă">
+          <option value="7">7 zile</option>
+          <option value="14">14 zile</option>
+          <option value="30" selected>30 zile</option>
+          <option value="60">60 zile</option>
+        </select>
+        <button id="btnScanLive" class="btn btn-primary" title="Descarcă anunțurile din e-licitatie.ro (Publicitate anunțuri)">
+          <span class="icon">🔄</span> Actualizează din SEAP
+        </button>
+        <button id="btnOpenCsvModal" class="btn btn-secondary" style="border-color: #10b981; color: #ecfdf5;">
+          <span class="icon">📂</span> Importă CSV din SEAP
+        </button>
+        <button id="btnOpenCalculator" class="btn btn-secondary">
+          <span class="icon">🧮</span> Calculator Kituri ESP32
+        </button>
+        <button id="btnAddCustom" class="btn btn-secondary">
+          <span class="icon">➕</span> Adaugă Anunț ADV
+        </button>
+        <button id="btnOpenProfile" class="btn btn-secondary">
+          <span class="icon">🏢</span> Date SRL / PFA
+        </button>
+        <button id="btnOpenGuide" class="btn btn-outline">
+          <span class="icon">📘</span> Cum încasezi în 3 zile
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Live Status Toast / Banner -->
+    <div id="syncBanner" class="sync-banner hidden"></div>
+    <div id="syncStatus" style="font-size: 13px; color: #9ca3af; margin: 0 0 12px;">🔄 Se verifică starea sincronizării cu e-licitatie.ro...</div>
+
+    <!-- KPI Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Anunțuri afișate (filtrate)</div>
+        <div class="kpi-value" id="kpiCount">0</div>
+        <div class="kpi-sub" id="kpiCountSub">în desfășurare</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valoare estimată totală</div>
+        <div class="kpi-value" id="kpiBudgetRON">0 RON</div>
+        <div class="kpi-sub" id="kpiBudgetEUR">~0 EUR în conturile UAT / Școli</div>
+      </div>
+      <div class="kpi-card kpi-highlight">
+        <div class="kpi-label">Profit estimat (orientativ, doar IT)</div>
+        <div class="kpi-value text-emerald" id="kpiProfitRON">0 RON</div>
+        <div class="kpi-sub" id="kpiProfitEUR">~0 EUR profit curat</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Marjă medie estimată (IT)</div>
+        <div class="kpi-value text-amber" id="kpiMargin">95%</div>
+        <div class="kpi-sub">1 după-amiază (Web) / 2–3 zile (Kituri)</div>
+      </div>
+    </section>
+
+    <!-- CPV Quick Copy Bar for e-licitatie.ro -->
+    <section class="cpv-bar">
+      <div class="cpv-bar-title">
+        <span>🎯 <strong>Trucul de Căutare pe <a href="https://www.e-licitatie.ro/pub" target="_blank" rel="noopener">e-licitatie.ro/pub</a>:</strong> Lasă câmpul <em>Cod CPV</em> GOL (primăriile pun CPV-uri diferite!) și scrie în <strong>„Denumire contract”</strong> un singur cuvânt de mai jos (Click pentru copiere):</span>
+      </div>
+      <div class="cpv-chips">
+        <button class="cpv-chip" data-cpv="site" title="Copiază cuvântul 'site'">
+          <code>site</code> Toate Site-urile de Primării/Școli
+        </button>
+        <button class="cpv-chip" data-cpv="web" title="Copiază cuvântul 'web'">
+          <code>web</code> Pagini Web / Portaluri Web
+        </button>
+        <button class="cpv-chip" data-cpv="registratura" title="Copiază cuvântul 'registratura'">
+          <code>registratura</code> Registratură Online & MOL
+        </button>
+        <button class="cpv-chip" data-cpv="arhiva" title="Copiază cuvântul 'arhiva'">
+          <code>arhiva</code> Arhivă Digitală & OCR
+        </button>
+        <button class="cpv-chip" data-cpv="robotica" title="Copiază cuvântul 'robotica'">
+          <code>robotica</code> Kituri Robotică Licee
+        </button>
+        <button class="cpv-chip" data-cpv="smart" title="Copiază cuvântul 'smart'">
+          <code>smart</code> Laboratoare Smart Lab PNRR
+        </button>
+        <a href="https://www.e-licitatie.ro/pub" target="_blank" rel="noopener" class="cpv-external-link">
+          Deschide Portalul Public SEAP (e-licitatie.ro/pub) ↗
+        </a>
+      </div>
+    </section>
+
+    <!-- Category Tabs & Filters -->
+    <section class="controls-panel">
+      <div class="category-tabs" id="categoryTabs">
+        <button class="tab-btn active" data-cat="it">
+          💻 Toate IT <span class="tab-count" id="countIt">0</span>
+        </button>
+        <button class="tab-btn" data-cat="web_registratura">
+          🌐 Site-uri & portaluri <span class="tab-count" id="countWeb">0</span>
+        </button>
+        <button class="tab-btn" data-cat="software_gestiune">
+          🧩 Software, aplicații & servicii IT <span class="tab-count" id="countSoft">0</span>
+        </button>
+        <button class="tab-btn" data-cat="hardware_it">
+          🖥️ Echipamente & rețele <span class="tab-count" id="countHw">0</span>
+        </button>
+        <button class="tab-btn" data-cat="smart_lab_kits">
+          🤖 Kituri / robotică <span class="tab-count" id="countKits">0</span>
+        </button>
+        <button class="tab-btn" data-cat="other">
+          📋 Non-IT <span class="tab-count" id="countOther">0</span>
+        </button>
+        <button class="tab-btn" data-cat="all">
+          🗂️ Toate anunțurile <span class="tab-count" id="countAll">0</span>
+        </button>
+      </div>
+
+      <div class="filters-row">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Caută în titlu, autoritate, CUI, CPV sau nr. anunț (ex: site primarie, laptop, ADV1556692)..." />
+        </div>
+
+        <select id="stateFilter" class="filter-select" title="Stare anunț după termenul limită de depunere a ofertelor">
+          <option value="active" selected>🟢 Doar în desfășurare</option>
+          <option value="expired">⛔ Doar expirate</option>
+          <option value="all">📋 Toate (active + expirate)</option>
+        </select>
+
+        <select id="statusFilter" class="filter-select">
+          <option value="all">📋 Toate Statusurile</option>
+          <option value="new">🆕 Noi (Neanalizate)</option>
+          <option value="saved">⭐ Salvate / În analiză</option>
+          <option value="offered">📩 Ofertă Trimisă pe Email</option>
+          <option value="catalog_published">📦 Publicat în Catalog SEAP</option>
+          <option value="won">💰 Contract Câștigat!</option>
+        </select>
+
+        <select id="sortFilter" class="filter-select">
+          <option value="deadline_asc">⏳ Sortare: termen limită (cel mai apropiat)</option>
+          <option value="published_desc">🆕 Sortare: publicate recent</option>
+          <option value="budget_desc">📈 Sortare: valoare (desc)</option>
+          <option value="profit_desc">💰 Sortare: profit estimat (desc)</option>
+        </select>
+
+        <button id="btnExportCSV" class="btn btn-outline btn-sm" title="Exportă lista curentă în Excel/CSV">
+          📥 Export CSV
+        </button>
+      </div>
+
+      <div class="filters-row date-filters-row">
+        <div class="date-group">
+          <span class="date-group-label">📢 Publicat</span>
+          <label>de la <input type="date" id="pubFrom" class="filter-date" /></label>
+          <label>până la <input type="date" id="pubTo" class="filter-date" /></label>
+        </div>
+        <div class="date-group">
+          <span class="date-group-label">⏳ Termen limită ofertă</span>
+          <label>de la <input type="date" id="dlFrom" class="filter-date" /></label>
+          <label>până la <input type="date" id="dlTo" class="filter-date" /></label>
+        </div>
+        <div class="date-group">
+          <span class="date-group-label">💰 Valoare RON</span>
+          <input type="number" id="minValue" class="filter-date filter-num" placeholder="min" min="0" step="100" />
+          <input type="number" id="maxValue" class="filter-date filter-num" placeholder="max" min="0" step="100" />
+        </div>
+      </div>
+      <div class="filters-row preset-row">
+        <span class="date-group-label">Rapid:</span>
+        <button type="button" class="preset-btn" data-preset="pub_today">Publicate azi</button>
+        <button type="button" class="preset-btn" data-preset="pub_3d">Publicate în ultimele 3 zile</button>
+        <button type="button" class="preset-btn" data-preset="pub_7d">Publicate în ultimele 7 zile</button>
+        <button type="button" class="preset-btn" data-preset="dl_3d">Expiră în următoarele 3 zile</button>
+        <button type="button" class="preset-btn" data-preset="dl_7d">Expiră în următoarele 7 zile</button>
+        <button type="button" class="preset-btn preset-reset" data-preset="reset">✖ Resetează filtrele</button>
+      </div>
+    </section>
+
+    <!-- Opportunities List -->
+    <section id="opportunitiesGrid" class="opp-grid"></section>
+    <div id="loadMoreWrap" class="load-more-wrap hidden">
+      <button type="button" id="btnLoadMore" class="btn btn-secondary">Arată mai multe</button>
+    </div>
+  </main>
+
+  <!-- MODAL 0: Smart SEAP Search & Direct Links -->
+  <div id="seapSearchModal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code" id="seapModalBadge">🔍 CĂUTARE ÎN SEAP (e-licitatie.ro)</span>
+          <h2 id="seapModalTitle">Deschide și filtrează achiziția în SEAP</h2>
+        </div>
+        <button class="modal-close" data-close="seapSearchModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="sync-banner" style="margin-bottom: 0;">
+          💡 <strong>Cum funcționează e-licitatie.ro:</strong> Portalul SEAP nu permite linkuri directe cu filtrele deja completate în URL (fiind o aplicație Angular închisă). Am copiat automat pentru tine <strong>cuvântul-cheie / codul CPV</strong> în Clipboard — doar dai <strong>Ctrl+V (Paste)</strong> pe pagina SEAP sau folosești căutarea directă Google/Caiete de Sarcini de mai jos!
+        </div>
+
+        <!-- Quick Copy Parameters -->
+        <div class="offer-section">
+          <h3>📋 1. Copiază cu 1-Click Codul Exact al Anunțului (NR ANUNT):</h3>
+          <div class="seap-copy-grid">
+            <div class="seap-copy-row">
+              <div>
+                <span class="fin-label">NR ANUNT (pentru căsuța „NR ANUNT” din stânga-sus în SEAP):</span>
+                <div class="code-box" id="seapCopyKeyword">ADV1551741</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btnCopySeapKw">📋 Copiază NR ANUNT</button>
+            </div>
+
+            <div class="seap-copy-row">
+              <div>
+                <span class="fin-label">Cod CPV (sau Data Publicării anunțului):</span>
+                <div class="code-box" id="seapCopyCpv">72413000-8</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btnCopySeapCpv">📋 Copiază CPV</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct Launch Buttons -->
+        <div class="offer-section">
+          <h3>🚀 2. Cum găsești acest anunț în 5 secunde pe e-licitatie.ro:</h3>
+          <div class="seap-links-stack">
+            <a id="linkSeapAdv" href="https://www.e-licitatie.ro/pub" target="_blank" rel="noopener" class="seap-action-card">
+              <div class="seap-action-icon">🟢</div>
+              <div>
+                <strong>Deschide Portalul Public SEAP (e-licitatie.ro/pub) ↗</strong>
+                <p>
+                  1. Intră în meniul <strong>„Inițieri de proceduri de achiziție” ➔ „Publicitate anunțuri”</strong>.<br/>
+                  2. ⚠️ <strong>FOARTE IMPORTANT:</strong> La <strong>„DATA PUBLICARE”</strong> apasă pe butonul <strong><code>[x]</code></strong> de lângă dată (sau pune din calendarul 📅 data de la începutul anului, ex. <code>01/01/2026</code>), altfel SEAP caută doar în ultimele 5 zile!<br/>
+                  3. În căsuța <strong>„NR ANUNT”</strong> (stânga-sus) dă <strong>Ctrl+V</strong> (codul <code>ADV...</code> este deja copiat!) și apasă <strong>FILTREAZA</strong>!
+                </p>
+              </div>
+            </a>
+
+            <a id="linkGoogleSeap" href="#" target="_blank" rel="noopener" class="seap-action-card">
+              <div class="seap-action-icon">⚡</div>
+              <div>
+                <strong>Alternativă 1-Click: Căutare Directă Caiete de Sarcini & Anunțuri ADV pe Google ↗</strong>
+                <p>Caută instantaneu toate anunțurile de achiziție directă și Caietele de Sarcini PDF publicate în ultima lună pe site-urile primăriilor, școlilor și în SEAP pentru această nișă!</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: 1-Click Offer & Deviz Generator -->
+  <div id="offerModal" class="modal-backdrop hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code" id="offerModalCode">ADV1458921</span>
+          <h2 id="offerModalTitle">Generator Ofertă Tehnică, Financiară & Poziție Catalog SEAP</h2>
+        </div>
+        <button class="modal-close" data-close="offerModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="offer-summary-bar">
+          <div class="offer-stat">
+            <span>Buget Estimat Instituție:</span>
+            <strong id="offerEstRON">22.500 RON</strong>
+          </div>
+          <div class="offer-stat">
+            <span>Preț Ofertat (4% sub buget):</span>
+            <strong class="text-amber" id="offerPriceRON">21.600 RON</strong>
+          </div>
+          <div class="offer-stat">
+            <span>Costul Tău (Piese / Hosting):</span>
+            <strong id="offerCostRON">450 RON</strong>
+          </div>
+          <div class="offer-stat">
+            <span>Profitul Tău Net:</span>
+            <strong class="text-emerald" id="offerProfitRON">+21.150 RON (~4.250 €)</strong>
+          </div>
+        </div>
+
+        <div class="offer-section">
+          <div class="offer-section-header">
+            <h3>1️⃣ Pasul 1: Titlul exact pentru Catalogul Electronic SEAP (e-licitatie.ro)</h3>
+            <button class="btn btn-sm btn-secondary" id="btnCopyCatalogTitle">📋 Copiază Titlul SEAP</button>
+          </div>
+          <p class="offer-hint">
+            Când urci produsul/serviciul în Catalogul SEAP, pune <strong>exact codul anunțului în paranteze pătrate</strong> la început ca funcționarul din primărie/școală să te găsească în 3 secunde și să îți dea „Inițiază cumpărare directă”:
+          </p>
+          <div class="code-box" id="offerCatalogBox"></div>
+        </div>
+
+        <div class="offer-section">
+          <div class="offer-section-header">
+            <h3>2️⃣ Pasul 2: Email de Înaintare Ofertă (Trimite-l imediat pe emailul instituției)</h3>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" id="btnCopyEmail">📋 Copiază Email</button>
+              <a id="btnMailtoLink" href="#" class="btn btn-sm btn-primary">✉️ Deschide în Email Client</a>
+            </div>
+          </div>
+          <textarea id="offerEmailTextarea" class="offer-textarea" rows="11"></textarea>
+        </div>
+
+        <div class="offer-section">
+          <div class="offer-section-header">
+            <h3>3️⃣ Pasul 3: Propunere Tehnică + Deviz Financiar Detaliat (Anexă PDF)</h3>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" id="btnCopyProposal">📋 Copiază Propunerea</button>
+              <button class="btn btn-sm btn-primary" id="btnPrintProposal">🖨️ Printează / Salvează PDF</button>
+            </div>
+          </div>
+          <textarea id="offerProposalTextarea" class="offer-textarea mono" rows="15"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Smart Lab Kit Calculator (Arduino / ESP32) -->
+  <div id="calcModal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code">🤖 SMART LAB PNRR</span>
+          <h2>Calculator Profit Kituri Educaționale (Arduino / ESP32)</h2>
+        </div>
+        <button class="modal-close" data-close="calcModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="offer-hint">
+          Liceele și școlile cu finanțare PNRR Smart Lab cumpără între <strong>25 și 50 de kituri</strong> pe contract. Piesele luate engros (AliExpress / distribuitori Polonia / România) costă ~75–95 RON/kit, iar prețul de achiziție în SEAP este de <strong>550 – 800 RON/kit</strong>.
+        </p>
+
+        <div class="calc-grid">
+          <div class="form-group">
+            <label>Număr de kituri solicitate de școală/liceu (buc):</label>
+            <input type="number" id="calcQty" value="40" min="1" max="500" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Preț vânzare în SEAP per kit (RON, fără TVA):</label>
+            <input type="number" id="calcSellUnit" value="680" min="100" max="5000" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Costul tău Placă ESP32 + Arduino UNO + Cablu (RON/kit):</label>
+            <input type="number" id="calcCostBoard" value="32" min="5" max="1000" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Costul tău Set 15 Senzori + Servo + Breadboard + Fire (RON/kit):</label>
+            <input type="number" id="calcCostSensors" value="36" min="5" max="1000" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Cost Cutie Plastic Organizatoare + Etichetă PNRR (RON/kit):</label>
+            <input type="number" id="calcCostBox" value="14" min="1" max="500" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Cost Transport Curier către Liceu (Total RON):</label>
+            <input type="number" id="calcShipping" value="80" min="0" max="2000" class="form-input" />
+          </div>
+        </div>
+
+        <div class="calc-results-box">
+          <div class="calc-res-item">
+            <span>Cost Total Piese per Kit:</span>
+            <strong id="calcResUnitCost">82 RON / buc</strong>
+          </div>
+          <div class="calc-res-item">
+            <span>Investiție Totală Marfă:</span>
+            <strong id="calcResTotalCost">3.360 RON</strong>
+          </div>
+          <div class="calc-res-item">
+            <span>Valoare Facturată Liceului (SEAP):</span>
+            <strong class="text-amber" id="calcResRevenue">27.200 RON (~5.467 €)</strong>
+          </div>
+          <div class="calc-res-item highlight">
+            <span>PROFITUL TĂU NET LA UN SINGUR LICEU:</span>
+            <strong class="text-emerald" id="calcResProfit">+23.840 RON (~4.792 €) • 88% Marjă</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Add Custom SEAP Notice -->
+  <div id="addModal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code">➕ ANUNȚ NOU SEAP</span>
+          <h2>Adaugă / Evaluează un Anunț din e-licitatie.ro</h2>
+        </div>
+        <button class="modal-close" data-close="addModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="addCustomForm" class="calc-grid">
+          <div class="form-group full-width">
+            <label>Titlu Achiziție Directă (copiat din SEAP):</label>
+            <input type="text" id="custTitle" required placeholder="Ex: Realizare site web Primărie + Registratură online / Kituri robotică Smart Lab" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Cod Anunț SEAP (ADV / DA):</label>
+            <input type="text" id="custCode" placeholder="Ex: ADV1459102" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Cod CPV:</label>
+            <input type="text" id="custCpv" value="72413000-8" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Autoritate Contractantă (Primărie / Școală):</label>
+            <input type="text" id="custAuthority" required placeholder="Ex: COMUNA DUMBRĂVIȚA / COLEGIUL NAȚIONAL..." class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Județ:</label>
+            <input type="text" id="custCounty" required placeholder="Ex: Timiș / Cluj / Iași" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Valoare Estimată SEAP (RON, fără TVA):</label>
+            <input type="number" id="custBudget" required value="20000" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Costul Tău Estimat (RON):</label>
+            <input type="number" id="custCost" value="400" class="form-input" />
+          </div>
+          <div class="form-group full-width">
+            <label>Descriere / Cerințe din Caietul de Sarcini:</label>
+            <textarea id="custDesc" rows="4" class="offer-textarea" placeholder="Lipește aici textul anunțului din SEAP pentru a genera automat oferta tehnică și devizul..."></textarea>
+          </div>
+          <div class="form-group full-width" style="text-align: right;">
+            <button type="submit" class="btn btn-primary">🚀 Salvează & Calculează Profitul</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Company Profile (SRL / PFA) -->
+  <div id="profileModal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code">🏢 DATE OPERATOR ECONOMIC</span>
+          <h2>Setări SRL / PFA pentru Generarea Automată a Ofertelor</h2>
+        </div>
+        <button class="modal-close" data-close="profileModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="profileForm" class="calc-grid">
+          <div class="form-group full-width">
+            <label>Denumire Firmă (SRL / PFA / II):</label>
+            <input type="text" id="profName" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>CUI / CIF:</label>
+            <input type="text" id="profCui" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Nr. Reg. Com. (J... / F...):</label>
+            <input type="text" id="profReg" required class="form-input" />
+          </div>
+          <div class="form-group full-width">
+            <label>Cont IBAN Trezorerie (obligatoriu pentru încasare de la instituții publice):</label>
+            <input type="text" id="profIban" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Persoană de Contact / Administrator:</label>
+            <input type="text" id="profRep" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Telefon Contact:</label>
+            <input type="text" id="profPhone" required class="form-input" />
+          </div>
+          <div class="form-group full-width">
+            <label>E-mail Ofertare:</label>
+            <input type="email" id="profEmail" required class="form-input" />
+          </div>
+          <div class="form-group full-width" style="text-align: right;">
+            <button type="submit" class="btn btn-primary">💾 Salvează Datele Firmei</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: Step-by-Step SEAP Guide -->
+  <div id="guideModal" class="modal-backdrop hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code">📘 GHID PRACTIC SEAP (0 CERȘEALĂ)</span>
+          <h2>Cum câștigi și încasezi o Achiziție Directă în 2–3 zile</h2>
+        </div>
+        <button class="modal-close" data-close="guideModal">✕</button>
+      </div>
+      <div class="modal-body guide-steps">
+        <div class="guide-step">
+          <div class="step-num">1</div>
+          <div>
+            <h4>De ce Achizițiile Directe (sub 270.120 RON) sunt o mină de aur?</h4>
+            <p>
+              Sub pragul legal de 270.120 RON (~54.000 €), primăriile, școlile și liceele <strong>NU fac licitație complicată</strong>. Ele publică un simplu <em>Anunț de Publicitate (ADV)</em> în SEAP cu termen de 1–3 zile și cumpără direct din Catalogul Electronic de la firma care le trimite oferta conformă la prețul corect.
+            </p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="step-num">2</div>
+          <div>
+            <h4>Selectează un anunț din SEAP Hunter și apasă „⚡ Generează Ofertă & Deviz”</h4>
+            <p>
+              Aplicația îți calculează automat o ofertă cu <strong>4% sub bugetul estimat al instituției</strong>, îți scrie Matricea de Conformitate Tehnică punct cu punct după Caietul de Sarcini și îți generează devizul financiar pe componente.
+            </p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="step-num">3</div>
+          <div>
+            <h4>Publică poziția în Catalogul Electronic SEAP + Trimite Emailul</h4>
+            <p>
+              Intri în contul tău de operator economic pe <code>e-licitatie.ro</code> → <strong>Catalog Electronic</strong> → Adaugă produs/serviciu. Pui titlul generat de Hunter (ex: <code>[ADV1458921] Realizare site web oficial Primărie...</code>) și codul CPV exact. Apoi trimiți pe emailul instituției Propunerea Tehnică PDF și le dai un telefon scurt de 30 de secunde: <em>„Bună ziua, am încărcat în catalogul SEAP oferta pentru anunțul ADV..., este 100% conformă și sub bugetul estimat, o puteți iniția oricând!”</em>
+            </p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="step-num">4</div>
+          <div>
+            <h4>Acceptarea în SEAP, Livrarea și Facturarea în RO e-Factura (Trezorerie)</h4>
+            <p>
+              Autoritatea îți trimite <em>Deliberarea în SEAP</em>, tu apeși <strong>„Acceptă termenii achiziției”</strong>, livrezi site-ul/aplicația (făcută cu template-urile noastre preconfigurate) sau cutiile cu kituri ESP32/Arduino, semnați Procesul-Verbal de Recepție și încarci factura în <strong>RO e-Factura (SPV ANAF)</strong>. Trezoreria îți virează banii direct în cont!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: Import XLSX / CSV din SEAP (Doar În Desfășurare + Curățare Automată) -->
+  <div id="csvModal" class="modal-backdrop hidden">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <div>
+          <span class="badge-code">📂 IMPORT DIRECT EXCEL (.XLSX) / CSV DIN SEAP</span>
+          <h2>Importă Fișierul <code>export-....xlsx</code> din SEAP (Doar Anunțurile În Desfășurare!)</h2>
+        </div>
+        <button class="modal-close" data-close="csvModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="offer-hint">
+          <strong>Cum iei din SEAP doar anunțurile ÎN DESFĂȘURARE (active azi):</strong><br/>
+          1. Pe <code>e-licitatie.ro</code> (<em>Publicitate anunțuri</em>), apasă <strong>„STERGE FILTRE”</strong> (data rămâne automat pe ultimele 5 zile!).<br/>
+          2. <strong>NU scrie nimic la „Denumire contract”</strong> (lasă gol ca să nu îți dea anunțuri vechi din alte luni!) și apasă direct <strong>„FILTREAZA”</strong>.<br/>
+          3. Apasă pe portocaliul <strong>„📥 Export”</strong> și încarcă fișierul <code>export-....xlsx</code> mai jos!
+        </p>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>1️⃣ Selectează fișierul Excel <code>export-....xlsx</code> (sau <code>.csv</code>) descărcat din SEAP:</label>
+          <input type="file" id="csvFileInput" accept=".xlsx,.csv,.txt" class="form-input" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; background: rgba(16, 185, 129, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: #ecfdf5;">
+            <input type="checkbox" id="chkOnlyActive" checked style="width: 18px; height: 18px;" />
+            🟢 Importă DOAR anunțurile ÎN DESFĂȘURARE azi (ignoră automat tot ce are „Data limită depunere ofertă” expirată!)
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #d1d5db;">
+            <input type="checkbox" id="chkReplaceOld" checked style="width: 16px; height: 16px;" />
+            🧹 Înlocuiește lista veche cu anunțurile din acest fișier
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>2️⃣ Sau lipește text CSV (opțional, dacă nu încarci fișierul .xlsx):</label>
+          <textarea id="csvTextarea" rows="5" class="offer-textarea mono" placeholder="Dacă ai selectat fișierul .xlsx mai sus, apasă direct pe butonul de mai jos!"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+          <button type="button" id="btnProcessCsv" class="btn btn-primary">
+            🚀 Extrage Doar Contractele IT/PNRR În Desfășurare
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

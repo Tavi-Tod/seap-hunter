@@ -1,0 +1,5 @@
+node_modules/
+data/
+site/
+.DS_Store
+*.tmp

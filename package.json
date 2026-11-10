@@ -1,0 +1,21 @@
+{
+  "name": "seap-hunter-pnrr",
+  "version": "1.0.0",
+  "description": "SEAP (e-licitatie.ro) Direct Acquisition Hunter — Digitalizare, Web & Kituri Scolare PNRR",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "hunt": "node scraper.js"
+  },
+  "keywords": [
+    "seap",
+    "sicap",
+    "e-licitatie",
+    "achizitii-directe",
+    "pnrr",
+    "smart-lab",
+    "digitalizare"
+  ],
+  "author": "SEAP Hunter",
+  "license": "MIT"
+}
