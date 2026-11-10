@@ -206,6 +206,8 @@ function setCount(id, value) {
 
 function renderAll() {
   setCount('countIt', lastCounts.it);
+  setCount('countFit', lastCounts.fit);
+  document.getElementById('fitExplainer').classList.toggle('hidden', activeCategory !== 'fit');
   setCount('countWeb', lastCounts.web_registratura);
   setCount('countSoft', lastCounts.software_gestiune);
   setCount('countHw', lastCounts.hardware_it);
@@ -382,6 +384,7 @@ function renderCardHTML(o) {
           <span class="badge-code" title="Număr anunț SEAP">${escapeHTML(o.code)}</span>
           <span class="badge-cat">${escapeHTML(o.categoryLabel)}</span>
           ${o.isPNRR ? '<span class="badge-pnrr">🇪🇺 PNRR / Proiect</span>' : ''}
+          ${o.isFit ? `<span class="badge-fit" title="${escapeHTML((o.fitReasons || []).join(' • '))}">🎯 Potrivit</span>` : ''}
         </div>
         <span class="score-pill">${escapeHTML(o.type)}</span>
       </div>
@@ -394,6 +397,12 @@ function renderCardHTML(o) {
       </div>
 
       ${finHTML}
+
+      ${o.isFit && (o.fitReasons.length || o.fitWarnings.length) ? `
+      <div class="fit-note">
+        ${o.fitReasons.map(r => `<span>✅ ${escapeHTML(r)}</span>`).join('')}
+        ${o.fitWarnings.map(w => `<span class="fit-warn">⚠️ ${escapeHTML(w)}</span>`).join('')}
+      </div>` : ''}
 
       ${renderDetailsHTML(o)}
 

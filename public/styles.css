@@ -1043,3 +1043,11 @@ body {
   .date-group label { flex-direction: column; align-items: stretch; font-size: 11px; }
   .date-group .filter-date { font-size: 13px; padding: 6px; }
 }
+
+/* ---------- Potrivit pentru noi ---------- */
+.tab-fit { border-color: var(--emerald); }
+.tab-fit.active { background: var(--emerald-bg); color: var(--emerald); border-color: var(--emerald); }
+.badge-fit { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald); padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.fit-note { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--emerald); margin-top: 10px; }
+.fit-note .fit-warn { color: var(--amber); }
+.fit-explainer { background: var(--emerald-bg); border: 1px solid var(--emerald); color: var(--text-main); border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 14px; }

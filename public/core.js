@@ -125,6 +125,47 @@ function formatRO(date) {
  * Transformă un anunț compact (din notices.json) în obiectul complet afișat în interfață.
  * @param {object} n - { code, advNoticeId, title, authority, cpvFull, publishedAt, deadline, valueRON, contractType, noticeType, category, status, notes, costRON }
  */
+// ============================================================================
+//  „Potrivit pentru noi”: servicii IT fără capital, fără cerințe de experiență / ISO / atestări
+// ============================================================================
+const FIT_MAX_VALUE_RON = 270000; // pragul aproximativ pentru achiziție directă de servicii (fără TVA)
+const FIT_SERVICE_RE = /(\bservici|mentenant|dezvoltare|realizare|implementare|configurare|instalare|administrare|suport|reparati|depanare|audit|digitaliz|scanare|instruire|\bcurs|formare|elaborare|proiectare|programare|actualizare (site|aplicati|platform)|gazduire|hosting|site|web|portal|aplicati|platform)/;
+const FIT_RESALE_RE = /(licent|abonament|subscripti|reinnoire|prelungire|furnizare|achizitie (de )?(echipament|produse|licent)|\blucrari\b|executie|dotari|servicii de (acces|abonare|utilizare)|acces la (o )?(platform|resurse)|semnatur|certificare digital|reciclare|copiator|trusa|acumulator)/;
+// marfă de cumpărat (dacă nu e un serviciu generic de mentenanță IT)
+const FIT_GOODS_RE = /(laptop|calculator|\bpc\b|server|echipament hsm|hardware security|display|monitor|imprimant|plotter|\bups\b|kit\b)/;
+const FIT_GENERIC_IT_MAINT_RE = /(servici|mentenant|reparati|intretinere).{0,40}(echipament(e|elor)? (it|informatic)|it&c|retea|retele|calculatoar|tehnic(a|ii) de calcul)/;
+const FIT_TRAINING_RE = /(instruire|\bcurs|formare)/;
+const FIT_TRAINING_IT_RE = /(windows|linux|\bit\b|it&c|securitat|cyber|gdpr|programare|informatic|digital|retele|cloud|baze de date|office|excel)/;
+const FIT_RED_FLAG_RE = /(\biso\b|experient(a|ei|e) similar|contracte similare|experienta (de|in) minim|atestat|acreditat|autorizati(e|i) (anre|isc|igsu|anrsc)|partener (autorizat|oficial|certificat)|distribuitor autorizat|reseller autorizat|certificat(e|ul)? (de )?(partener|producator)|garantie de participare)/;
+
+function assessFit(n, category, valRON, cancelled) {
+  const t = normalizeText(n.title);
+  const d = n.details || null;
+  const reasons = [];
+  const warnings = [];
+  if (cancelled || !IT_CATEGORIES.has(category) || category === 'smart_lab_kits') return { fit: false, reasons, warnings };
+  const isService = FIT_SERVICE_RE.test(t) || /^(72|7941|8053|5031|5032|5161|79999)/.test(String(n.cpvFull || ''));
+  const isResale = FIT_RESALE_RE.test(t) && !/(dezvoltare|mentenant|realizare|implementare) (a )?(aplicati|site|platform|software|sistem)/.test(t);
+  if (!isService || isResale) return { fit: false, reasons, warnings };
+  if (FIT_GOODS_RE.test(t) && !FIT_GENERIC_IT_MAINT_RE.test(t)) return { fit: false, reasons, warnings };
+  if (FIT_TRAINING_RE.test(t) && !FIT_TRAINING_IT_RE.test(t)) return { fit: false, reasons, warnings };
+  if (valRON > FIT_MAX_VALUE_RON) return { fit: false, reasons, warnings };
+  reasons.push('serviciu (fără marfă de cumpărat)');
+  if (/(actualizare|upgrade|mentenant|suport tehnic|intretinere).{0,40}(aplicati|software|sistem|algoritm|platform)/.test(t) && !/(site|web|portal)/.test(t)) {
+    warnings.push('mentenanță la un sistem existent — verifică dacă nu poate fi făcută doar de producător');
+  }
+  if (d) {
+    const cond = normalizeText([d.participationConditions, d.contractRelatedConditions, d.additionalInformation].join(' '));
+    const flag = cond.match(FIT_RED_FLAG_RE);
+    if (flag) return { fit: false, reasons, warnings: [`cere: „${flag[0]}”`] };
+    reasons.push('fără cerințe de experiență / ISO / atestări');
+    if (/pret(ul)? cel mai (mic|scazut)|cel mai mic pret/.test(normalizeText(d.awardCriteria))) reasons.push('se câștigă pe preț');
+  } else {
+    warnings.push('condițiile nu au fost verificate încă');
+  }
+  return { fit: true, reasons, warnings };
+}
+
 function buildOpportunity(n, now = new Date()) {
   // categoria se recalculează la fiecare citire (îmbunătățirile clasificatorului se aplică și pe datele vechi);
   // pentru anunțurile adăugate manual păstrăm categoria aleasă
@@ -154,6 +195,7 @@ function buildOpportunity(n, now = new Date()) {
     isIT: IT_CATEGORIES.has(category),
     isActive: active,
     isCancelled: cancelled,
+    ...(() => { const f = assessFit(n, category, valRON, cancelled); return { isFit: f.fit, fitReasons: f.reasons, fitWarnings: f.warnings }; })(),
     authority: cuiMatch ? cuiMatch[2] : authority,
     cui: cuiMatch ? cuiMatch[1] : '-',
     county: n.county || '-',
@@ -223,7 +265,7 @@ function filterList(list, f = {}) {
   const maxValue = f.maxValue !== undefined && f.maxValue !== '' ? Number(f.maxValue) : null;
   const q = normalizeText(f.q || '').trim();
 
-  const counts = { all: 0, it: 0, other: 0 };
+  const counts = { all: 0, it: 0, fit: 0, other: 0 };
   for (const c of Object.keys(CATEGORY_META)) counts[c] = 0;
   const results = [];
 
@@ -245,9 +287,11 @@ function filterList(list, f = {}) {
     counts.all++;
     counts[o.category] = (counts[o.category] || 0) + 1;
     if (o.isIT) counts.it++;
+    if (o.isFit) counts.fit++;
 
     if (scope === 'it' && !o.isIT) continue;
-    if (scope !== 'it' && scope !== 'all' && o.category !== scope) continue;
+    if (scope === 'fit' && !o.isFit) continue;
+    if (scope !== 'it' && scope !== 'fit' && scope !== 'all' && o.category !== scope) continue;
     results.push(o);
   }
 
