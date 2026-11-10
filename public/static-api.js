@@ -36,17 +36,53 @@
   let notices = null;
   let meta = null;
 
+  // CDN-ul GitHub Pages ține fișierele în cache până la 10 minute și IGNORĂ parametrii ?t=...
+  // Cu token citim direct ramura "data" prin API-ul GitHub (mereu proaspăt); fără token folosim Pages.
+  async function readDataBranch(file) {
+    const res = await realFetch(`${GH}/repos/${CFG.repo}/contents/${file}?ref=data`, {
+      headers: { ...ghHeaders(getToken()), Accept: 'application/vnd.github.raw+json' },
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error(`GitHub ${res.status}`);
+    return res.json();
+  }
+
   async function loadMeta() {
+    if (getToken()) {
+      try {
+        const s = await readDataBranch('sync-state.json');
+        meta = {
+          syncedAt: s.lastSyncAt,
+          lastFullSyncAt: s.lastFullSyncAt,
+          lastResult: s.lastResult,
+          totalCount: s.lastResult && s.lastResult.totalCount,
+          builtAt: s.lastSyncAt,
+          source: 'api'
+        };
+        return meta;
+      } catch (e) {
+        console.warn('Citire prin API eșuată, folosesc GitHub Pages:', e.message);
+      }
+    }
     const res = await realFetch(`data/meta.json?t=${Date.now()}`, { cache: 'no-store' });
     meta = await res.json();
+    meta.builtAt = meta.syncedAt || meta.builtAt; // același reper ca în varianta API
+    meta.source = 'pages';
     return meta;
   }
 
   async function loadNotices(force = false) {
     if (notices && !force) return notices;
     const m = await loadMeta();
-    const res = await realFetch(`data/notices.json?v=${encodeURIComponent(m.builtAt || Date.now())}`);
-    notices = await res.json();
+    let list = null;
+    if (m.source === 'api') {
+      list = await readDataBranch('notices.json').catch(() => null);
+    }
+    if (!list) {
+      const res = await realFetch(`data/notices.json?v=${encodeURIComponent(m.builtAt || Date.now())}`, { cache: 'no-store' });
+      list = await res.json();
+    }
+    notices = list;
     notices._builtAt = m.builtAt;
     mergeStatuses();
     return notices;
@@ -126,6 +162,7 @@
   //  „Actualizează acum” → workflow_dispatch
   // ------------------------------------------------------------------
   let runningSince = null;
+  let remoteRunning = false; // o actualizare pornită de pe alt dispozitiv / automat
   let syncPromise = null;
 
   async function latestRun(token) {
@@ -155,19 +192,23 @@
       if (!res.ok) throw new Error(`GitHub a refuzat pornirea actualizării (${res.status}).`);
       runningSince = Date.now();
 
-      // așteptăm noua versiune a datelor publicată pe Pages (max ~6 minute)
-      const deadline = Date.now() + 6 * 60000;
+      // așteptăm să se termine rularea noastră pe GitHub (sincronizare + publicare), max ~8 minute
+      const deadline = Date.now() + 8 * 60000;
+      let ourRun = null;
       while (Date.now() < deadline) {
-        await sleep(8000);
-        const m = await loadMeta().catch(() => null);
-        if (m && m.builtAt && m.builtAt !== before) {
-          await loadNotices(true);
-          return { ...(m.lastResult || {}), success: true, liveReachable: true, timestamp: m.syncedAt };
-        }
+        await sleep(6000);
         const run = await latestRun(token).catch(() => null);
-        if (run && run.status === 'completed' && run.conclusion !== 'success' && new Date(run.created_at).getTime() >= runningSince - 60000) {
-          throw new Error(`Actualizarea pe GitHub a eșuat (${run.conclusion}). Detalii: ${run.html_url}`);
+        if (run && new Date(run.created_at).getTime() >= runningSince - 30000) ourRun = run;
+        if (!ourRun || ourRun.status !== 'completed') continue;
+        if (ourRun.conclusion !== 'success') {
+          throw new Error(`Actualizarea pe GitHub a eșuat (${ourRun.conclusion}). Detalii: ${ourRun.html_url}`);
         }
+        await loadNotices(true);
+        const m = meta || {};
+        if (m.builtAt === before) {
+          throw new Error('Rularea s-a terminat, dar datele noi nu sunt încă vizibile. Reîncarcă pagina peste un minut.');
+        }
+        return { ...(m.lastResult || {}), success: true, liveReachable: true, timestamp: m.syncedAt };
       }
       throw new Error('Actualizarea durează mai mult decât de obicei; lista se va reîncărca automat când e gata.');
     })().finally(() => {
@@ -198,8 +239,8 @@
       lastSyncAt: m.syncedAt,
       lastFullSyncAt: m.lastFullSyncAt,
       lastResult: m.lastResult,
-      running: Boolean(runningSince),
-      progress: runningSince ? { done: 0, total: 1, fetched: 0, phase: 'github' } : null,
+      running: Boolean(runningSince || remoteRunning),
+      progress: runningSince || remoteRunning ? { done: 0, total: 1, fetched: 0, phase: 'github' } : null,
       nextAutoSyncAt: null,
       autoSyncMinutes: 30,
       totalCount: m.totalCount || (notices ? notices.length : 0),
@@ -228,6 +269,10 @@
     if (method === 'GET' && p === '/api/sync-status') {
       const prevBuilt = meta && meta.builtAt;
       await loadMeta().catch(() => null);
+      if (getToken() && !runningSince) {
+        const run = await latestRun(getToken()).catch(() => null);
+        remoteRunning = Boolean(run && run.status !== 'completed');
+      }
       // date noi publicate de rularea automată → reîncărcăm lista la următoarea cerere
       if (notices && meta && meta.builtAt !== prevBuilt && meta.builtAt !== notices._builtAt) notices = null;
       return json(syncInfo());

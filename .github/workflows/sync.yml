@@ -3,6 +3,9 @@ name: Sincronizare SEAP + publicare
 on:
   schedule:
     - cron: '7,37 * * * *'   # ~la fiecare 30 de minute (GitHub poate întârzia câteva minute)
+  push:                       # la orice modificare de cod → republicăm pagina
+    branches: [main]
+    paths: ['public/**', 'scripts/**', 'seap-client.js', '.github/workflows/sync.yml']
   workflow_dispatch:          # butonul „Actualizează acum” din pagină
     inputs:
       days:
