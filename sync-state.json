@@ -1,0 +1,21 @@
+{
+  "lastSyncAt": "2026-11-21T15:17:47.898Z",
+  "lastFullSyncAt": "2026-11-21T15:17:47.898Z",
+  "lastResult": {
+    "success": true,
+    "liveReachable": true,
+    "error": null,
+    "days": 30,
+    "fetchedCount": 4905,
+    "itCount": 358,
+    "itActiveCount": 65,
+    "relevantCount": 65,
+    "addedCount": 6,
+    "updatedCount": 4899,
+    "removedCount": 0,
+    "totalCount": 6983,
+    "detailsCount": 37,
+    "durationMs": 71314,
+    "timestamp": "2026-11-21T15:17:47.898Z"
+  }
+}
